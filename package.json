@@ -1,0 +1,32 @@
+{
+  "name": "affix-og",
+  "version": "1.1.0",
+  "description": "Affix-OG: Smart Sleep & Health Monitoring System — Real-time 12-parameter biometric dashboard with AI diagnostics and PDF reporting",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "health-monitoring",
+    "sleep-tracking",
+    "esp32",
+    "websocket",
+    "real-time",
+    "biometric",
+    "jspdf",
+    "clinical-ai"
+  ],
+  "author": "Omkar Gaikwad",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.22.1",
+    "socket.io": "^4.8.3",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}

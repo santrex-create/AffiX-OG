@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Affix-OG · Smart Sleep & Health Monitor</title>
+
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- PDF Generation Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECURITY GATEWAY MODAL
+       ═══════════════════════════════════════════════════════════════ -->
+  <div id="securityModal" class="modal-overlay">
+    <div class="modal-glass">
+      <div class="modal-header">
+        <div class="modal-lock-icon"><i class="fa-solid fa-shield-halved"></i></div>
+        <h2>Security Gateway</h2>
+        <p>Authorization required to access clinical dashboard</p>
+      </div>
+      <form id="loginForm" class="modal-form">
+        <div class="input-group">
+          <i class="fa-solid fa-id-badge"></i>
+          <input type="text" id="loginId" placeholder="Physician ID" autocomplete="off" required />
+        </div>
+        <div class="input-group">
+          <i class="fa-solid fa-lock"></i>
+          <input type="password" id="loginPass" placeholder="Access Code" required />
+        </div>
+        <div id="loginError" class="login-error">Invalid ID or Access Code</div>
+        <button type="submit" class="btn btn-primary btn-block">Authenticate <i class="fa-solid fa-arrow-right"></i></button>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SIDE NAVIGATION
+       ═══════════════════════════════════════════════════════════════ -->
+  <nav id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+      <div class="sidebar-logo">
+        <img src="assets/1000532489.png" alt="Affix-OG Sleek Logo" class="logo-sleek" />
+      </div>
+      <ul class="nav-links">
+        <li><a href="#" class="nav-link active" data-view="home"><i class="fa-solid fa-house"></i><span>Home</span></a></li>
+        <li><a href="#" class="nav-link" data-view="dashboard"><i class="fa-solid fa-chart-line"></i><span>Dashboard</span></a></li>
+        <li><a href="#" class="nav-link" data-view="ai-suggestions"><i class="fa-solid fa-brain"></i><span>AI Suggestions</span></a></li>
+        <li><a href="#" class="nav-link" data-view="status-updates"><i class="fa-solid fa-tower-broadcast"></i><span>Status Updates</span></a></li>
+        <li><a href="#" class="nav-link" data-view="patient-history"><i class="fa-solid fa-clock-rotate-left"></i><span>Patient History</span></a></li>
+        <li><a href="#" class="nav-link" data-view="digital-twin"><i class="fa-solid fa-user-astronaut"></i><span>Digital Twin</span></a></li>
+      </ul>
+      <div class="sidebar-footer">
+        <div class="connection-badge" id="connectionBadge">
+          <span class="pulse-dot"></span>
+          <span class="conn-text">Simulation</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle navigation">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MAIN CONTENT AREA
+       ═══════════════════════════════════════════════════════════════ -->
+  <main id="mainContent" class="main-content">
+
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h2 class="topbar-title" id="topbarTitle">Home</h2>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-time" id="topbarTime"></span>
+        <button class="settings-btn" id="settingsBtn" aria-label="Settings"><i class="fa-solid fa-gear"></i></button>
+      </div>
+    </header>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+      <div class="settings-panel-header">
+        <h3>Settings & Info</h3>
+        <button class="settings-close" id="settingsClose"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="settings-panel-body">
+        <div class="settings-section">
+          <h4><i class="fa-solid fa-code"></i> Developer</h4>
+          <p class="dev-name">Omkar Gaikwad</p>
+          <a href="mailto:omkargaikwad7887@gmail.com" class="dev-email"><i class="fa-solid fa-envelope"></i> omkargaikwad7887@gmail.com</a>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ═════════════════════════════════════════════════════════════
+         VIEW: HOME (Unchanged from previous build)
+         ═════════════════════════════════════════════════════════════ -->
+    <section id="view-home" class="view active">
+      <!-- Home content remains the same (Hero, Vision, Journey) -->
+      <div class="hero">
+        <div class="hero-grid-bg"></div>
+        <div class="hero-particles" id="heroParticles"></div>
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-content">
+          <div class="hero-logo-wrap anim-fade-in"><img src="assets/1000532487.png" alt="Affix-OG" class="hero-logo" /></div>
+          <h1 class="hero-title anim-slide-up"><span class="hero-title-line1">Smart Sleep &</span><span class="hero-title-line2">Health Monitoring</span></h1>
+          <p class="hero-subtitle anim-slide-up anim-delay-2">AI-powered biometric intelligence — 12 vital channels streaming in real-time for proactive health insight.</p>
+          <div class="hero-actions anim-slide-up anim-delay-3">
+            <a href="#" class="btn btn-primary" data-view="dashboard"><i class="fa-solid fa-chart-line"></i> Open Dashboard</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═════════════════════════════════════════════════════════════
+         VIEW: DASHBOARD (Secured)
+         ═════════════════════════════════════════════════════════════ -->
+    <section id="view-dashboard" class="view">
+      <div class="dashboard-container" id="dashboardContent">
+        <!-- Action Bar -->
+        <div class="dash-actions">
+          <div class="patient-info-badge">
+            <i class="fa-solid fa-hospital-user"></i>
+            <div>
+              <span>Patient ID: #AFFIX-1024</span>
+              <span class="sub">Bed 4 | ICUs</span>
+            </div>
+          </div>
+          <button id="generatePdfBtn" class="btn btn-ghost"><i class="fa-solid fa-file-pdf"></i> Download Report</button>
+        </div>
+
+        <!-- Live Charts Snapshot Area -->
+        <div class="dash-grid">
+          <div class="glass-card dash-card span-2">
+            <div class="card-header"><i class="fa-solid fa-wave-square"></i> ECG & Vitals Stream</div>
+            <div class="chart-placeholder" id="chartArea">
+              <canvas id="ecgCanvas"></canvas>
+            </div>
+          </div>
+          <div class="glass-card dash-card">
+            <div class="card-header"><i class="fa-solid fa-heart-pulse"></i> Heart Rate</div>
+            <div class="big-stat" id="statHR">--<span>BPM</span></div>
+          </div>
+          <div class="glass-card dash-card">
+            <div class="card-header"><i class="fa-solid fa-droplet"></i> SpO2</div>
+            <div class="big-stat" id="statSpO2">--<span>%</span></div>
+          </div>
+          <div class="glass-card dash-card">
+            <div class="card-header"><i class="fa-solid fa-temperature-half"></i> Body Temp</div>
+            <div class="big-stat" id="statTemp">--<span>°C</span></div>
+          </div>
+          <div class="glass-card dash-card">
+            <div class="card-header"><i class="fa-solid fa-lungs"></i> Respiration</div>
+            <div class="big-stat" id="statResp">--<span>dB</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═════════════════════════════════════════════════════════════
+         VIEW: AI SUGGESTIONS
+         ═════════════════════════════════════════════════════════════ -->
+    <section id="view-ai-suggestions" class="view">
+      <div class="view-inner">
+        <div class="section-header">
+          <span class="section-tag">Rule-Based Intelligence</span>
+          <h2 class="section-title">AI Diagnostic Assistant</h2>
+        </div>
+
+        <div class="ai-layout">
+          <!-- Upload Dropzone -->
+          <div class="glass-card ai-upload-zone">
+            <div class="dropzone" id="aiDropzone">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <h3>Upload Patient Data</h3>
+              <p>Drag & drop CSV/JSON or click to browse</p>
+              <input type="file" id="fileInput" hidden accept=".csv,.json" />
+            </div>
+            <button id="analyzeLiveBtn" class="btn btn-primary" style="margin-top: 16px; width: 100%;">
+              <i class="fa-solid fa-satellite-dish"></i> Analyze Live Stream
+            </button>
+          </div>
+
+          <!-- AI Output -->
+          <div class="glass-card ai-output">
+            <div class="ai-output-header">
+              <i class="fa-solid fa-robot"></i> Clinical Analysis
+            </div>
+            <div id="aiAnalysisContent" class="ai-analysis-body">
+              <div class="ai-idle">
+                <i class="fa-solid fa-circle-nodes"></i>
+                <p>Awaiting data input for rule evaluation...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═════════════════════════════════════════════════════════════
+         VIEW: STATUS UPDATES
+         ═════════════════════════════════════════════════════════════ -->
+    <section id="view-status-updates" class="view">
+      <div class="view-inner">
+        <div class="section-header">
+          <span class="section-tag">Alerts & Notifications</span>
+          <h2 class="section-title">Status Updates</h2>
+        </div>
+        <div class="status-log glass-card">
+          <ul id="statusLogList" class="log-list">
+            <!-- Populated by JS -->
+          </ul>
+          <div class="log-empty" id="logEmpty"><i class="fa-solid fa-bell-slash"></i> No active alerts. System nominal.</div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═════════════════════════════════════════════════════════════
+         VIEW: PATIENT HISTORY
+         ═════════════════════════════════════════════════════════════ -->
+    <section id="view-patient-history" class="view">
+      <div class="view-inner">
+        <div class="section-header">
+          <span class="section-tag">Records</span>
+          <h2 class="section-title">Patient History</h2>
+        </div>
+        
+        <div class="history-grid">
+          <div class="glass-card">
+            <h3 class="card-title"><i class="fa-solid fa-user-clock"></i> Demographics</h3>
+            <table class="data-table">
+              <tbody>
+                <tr><td>Patient ID</td><td>#AFFIX-1024</td></tr>
+                <tr><td>Name</td><td>John Doe</td></tr>
+                <tr><td>Age / Sex</td><td>54 / Male</td></tr>
+                <tr><td>Diagnosis</td><td>Obstructive Sleep Apnea</td></tr>
+                <tr><td>Admit Date</td><td>2023-10-12</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="glass-card">
+            <h3 class="card-title"><i class="fa-solid fa-timeline"></i> Critical Event Timeline</h3>
+            <div class="mini-timeline">
+              <div class="mini-tl-item"><span class="tl-time">Oct 12, 03:22</span> Severe Apnea Episode (SpO2 82%)</div>
+              <div class="mini-tl-item"><span class="tl-time">Oct 14, 11:10</span> CPAP Therapy Initiated</div>
+              <div class="mini-tl-item"><span class="tl-time">Oct 16, 04:05</span> Tachycardia Alert (HR 112)</div>
+              <div class="mini-tl-item"><span class="tl-time">Oct 20, 09:30</span> Stable Discharge Evaluation</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ═════════════════════════════════════════════════════════════
+         VIEW: DIGITAL TWIN
+         ═════════════════════════════════════════════════════════════ -->
+    <section id="view-digital-twin" class="view">
+      <div class="construction-placeholder">
+        <div class="construction-glow"></div>
+        <i class="fa-solid fa-atom"></i>
+        <h2>Digital Twin</h2>
+        <p>System Under Construction</p>
+        <span class="construction-badge">Coming in v2.0</span>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
