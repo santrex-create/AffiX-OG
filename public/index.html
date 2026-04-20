@@ -3,291 +3,466 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Affix-OG · Smart Sleep & Health Monitor</title>
+  <title>Affix-OG · AI-Powered Patient Monitoring System</title>
 
-  <!-- Fonts & Icons -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-
-  <!-- PDF Generation Libraries -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🫀</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       SECURITY GATEWAY MODAL
-       ═══════════════════════════════════════════════════════════════ -->
-  <div id="securityModal" class="modal-overlay">
-    <div class="modal-glass">
-      <div class="modal-header">
-        <div class="modal-lock-icon"><i class="fa-solid fa-shield-halved"></i></div>
-        <h2>Security Gateway</h2>
-        <p>Authorization required to access clinical dashboard</p>
+<!-- ─── ALERT BANNER ───────────────────────── -->
+<div id="alertBanner" class="alert-banner hidden">
+  <div class="alert-icon-box"><i class="fa-solid fa-triangle-exclamation"></i></div>
+  <div class="alert-text"><strong id="alertTitle">CLINICAL ALERT</strong><p id="alertMsg">Vital Sign Threshold Breach</p></div>
+  <button class="alert-dismiss" onclick="document.getElementById('alertBanner').classList.add('hidden')"><i class="fa-solid fa-xmark"></i></button>
+</div>
+
+<!-- ─── NAVBAR ─────────────────────────────── -->
+<nav id="navbar" class="navbar glass-nav">
+  <div class="nav-brand" data-page="home">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-neon-green"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Affix<span class="text-neon-blue">-OG</span>
+  </div>
+  <div class="nav-links">
+    <a href="#" class="nav-link active" data-page="home">Home</a>
+    <a href="#" class="nav-link" data-page="dashboard">Dashboard</a>
+    <a href="#" class="nav-link" data-page="about">About</a>
+    <a href="#" class="nav-link" data-page="contact">Contact</a>
+    <a href="#" class="nav-link" data-page="ai">AI Suggestions</a>
+    <a href="#" class="nav-link" data-page="status">Status Updates</a>
+    <a href="#" class="nav-link" data-page="history">Patient History</a>
+    <a href="#" class="nav-link" data-page="twin">Digital Twin</a>
+    <a href="#" class="nav-link" data-page="acknowledgement">Acknowledgement</a>
+  </div>
+  <div class="nav-actions">
+    <button id="systemCheckBtn" class="btn btn-outline-sm"><i class="fa-solid fa-stethoscope"></i> System Check</button>
+    <button id="authBtn" class="btn btn-primary-sm"><i class="fa-solid fa-lock"></i> Clinical Login</button>
+  </div>
+</nav>
+
+<!-- ─── PAGES CONTAINER ────────────────────── -->
+<main id="appContent">
+
+<!-- ═══ HOME PAGE ═══ -->
+<section id="page-home" class="page active">
+  <div class="hero">
+    <div class="hero-glow"></div>
+    <div class="container hero-content text-center">
+      <div class="badge">IoT + AI + ML Powered Healthcare</div>
+      <h1>AI-Powered Patient<br><span class="gradient-text">Monitoring System</span></h1>
+      <p class="hero-sub">Bridging advanced IoT sensors with clinical Machine Learning for real-time sleep apnea detection and proactive intensive care.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary btn-glow" data-page="dashboard"><i class="fa-solid fa-chart-line"></i> Open Dashboard</button>
+        <button class="btn btn-ghost" data-page="about"><i class="fa-solid fa-play-circle"></i> How It Works</button>
       </div>
-      <form id="loginForm" class="modal-form">
-        <div class="input-group">
-          <i class="fa-solid fa-id-badge"></i>
-          <input type="text" id="loginId" placeholder="Physician ID" autocomplete="off" required />
-        </div>
-        <div class="input-group">
-          <i class="fa-solid fa-lock"></i>
-          <input type="password" id="loginPass" placeholder="Access Code" required />
-        </div>
-        <div id="loginError" class="login-error">Invalid ID or Access Code</div>
-        <button type="submit" class="btn btn-primary btn-block">Authenticate <i class="fa-solid fa-arrow-right"></i></button>
-      </form>
     </div>
   </div>
 
+  <div class="container stats-row">
+    <div class="stat-card glass"><h3>10,000+</h3><p>Patients Monitored</p></div>
+    <div class="stat-card glass"><h3>99.2%</h3><p>AI Accuracy Rate</p></div>
+    <div class="stat-card glass"><h3>12ms</h3><p>Cloud Latency</p></div>
+    <div class="stat-card glass"><h3>24/7</h3><p>Continuous Tracking</p></div>
+  </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       SIDE NAVIGATION
-       ═══════════════════════════════════════════════════════════════ -->
-  <nav id="sidebar" class="sidebar">
-    <div class="sidebar-inner">
-      <div class="sidebar-logo">
-        <img src="assets/1000532489.png" alt="Affix-OG Sleek Logo" class="logo-sleek" />
+  <div class="container section">
+    <div class="acknowledgement-grid">
+      <div class="glass acknowledgement-hero">
+        <h2 class="gradient-text">Omkar Kiran Gaikwad</h2>
+        <p class="text-digital">Diploma in Medical Electronics, 3rd Year (6th Semester)</p>
+        <p>I am a passionate student in the field of medical electronics, focused on developing innovative healthcare solutions using embedded systems and IoT technologies. This project reflects my interest in combining electronics with healthcare to create practical and impactful systems for patient monitoring.</p>
       </div>
-      <ul class="nav-links">
-        <li><a href="#" class="nav-link active" data-view="home"><i class="fa-solid fa-house"></i><span>Home</span></a></li>
-        <li><a href="#" class="nav-link" data-view="dashboard"><i class="fa-solid fa-chart-line"></i><span>Dashboard</span></a></li>
-        <li><a href="#" class="nav-link" data-view="ai-suggestions"><i class="fa-solid fa-brain"></i><span>AI Suggestions</span></a></li>
-        <li><a href="#" class="nav-link" data-view="status-updates"><i class="fa-solid fa-tower-broadcast"></i><span>Status Updates</span></a></li>
-        <li><a href="#" class="nav-link" data-view="patient-history"><i class="fa-solid fa-clock-rotate-left"></i><span>Patient History</span></a></li>
-        <li><a href="#" class="nav-link" data-view="digital-twin"><i class="fa-solid fa-user-astronaut"></i><span>Digital Twin</span></a></li>
-      </ul>
-      <div class="sidebar-footer">
-        <div class="connection-badge" id="connectionBadge">
-          <span class="pulse-dot"></span>
-          <span class="conn-text">Simulation</span>
+      <div class="glass acknowledgement-overview">
+        <h3>Project Overview</h3>
+        <p>This project, titled "Sleep Apnea Multi-Parameter Patient Monitoring System", is a real-time healthcare monitoring system designed to continuously track vital physiological parameters of a patient. The system is built using advanced embedded technology and aims to improve early detection of sleep-related disorders such as sleep apnea.</p>
+        <p>The project focuses on providing accurate, reliable, and real-time monitoring using multiple sensors integrated with an ESP32-based system. It combines signal processing, IoT communication, and intelligent analysis to deliver a clinical-grade monitoring solution.</p>
+      </div>
+      <div class="glass acknowledgement-institution">
+        <h3>Institution Details</h3>
+        <i class="fa-solid fa-building-columns"></i>
+        <p>College Name: Government Polytechnic Miraj</p>
+        <p>This project was developed as part of academic learning and practical implementation in the field of biomedical and embedded systems.</p>
+      </div>
+      <div class="glass acknowledgement-mentor">
+        <h3>Mentor</h3>
+        <i class="fa-solid fa-chalkboard-user"></i>
+        <p>Mentor Name: Mrs. T. G. Pathan</p>
+        <p>We sincerely express our gratitude to our mentor for providing continuous guidance, support, and encouragement throughout the project development.</p>
+        <div class="mentor-border"></div>
+      </div>
+      <div class="glass acknowledgement-features">
+        <h3>Project Features</h3>
+        <div class="feature-grid">
+          <div class="feature-pill glass-dark">Real-time monitoring of vital parameters</div>
+          <div class="feature-pill glass-dark">Multi-sensor data fusion (ECG, SpO2, Respiration, Motion, Temperature)</div>
+          <div class="feature-pill glass-dark">Sleep apnea detection and classification</div>
+          <div class="feature-pill glass-dark">Motion artifact rejection for improved accuracy</div>
+          <div class="feature-pill glass-dark">Smart alert system with priority levels</div>
+          <div class="feature-pill glass-dark">Low-latency wireless communication using ESP-NOW</div>
+          <div class="feature-pill glass-dark">Data compression for efficient transmission</div>
+          <div class="feature-pill glass-dark">AI-based sleep stage and health analysis</div>
         </div>
       </div>
+      <div class="glass acknowledgement-parameters">
+        <h3>Parameters Monitored</h3>
+        <div class="parameter-grid">
+          <div class="parameter-pill glass-dark">Heart Rate (ECG & PPG)</div>
+          <div class="parameter-pill glass-dark">Blood Oxygen (SpO2)</div>
+          <div class="parameter-pill glass-dark">Respiration Rate</div>
+          <div class="parameter-pill glass-dark">Heart Rate Variability (HRV)</div>
+          <div class="parameter-pill glass-dark">Motion Activity</div>
+          <div class="parameter-pill glass-dark">Sleep Stage</div>
+          <div class="parameter-pill glass-dark">Apnea Detection</div>
+          <div class="parameter-pill glass-dark">Temperature & Humidity</div>
+          <div class="parameter-pill glass-dark">Battery Status</div>
+          <div class="parameter-pill glass-dark">Signal Quality Index</div>
+        </div>
+      </div>
+      <div class="glass acknowledgement-technologies">
+        <h3>Technologies & Components Used</h3>
+        <div class="technology-grid">
+          <div class="technology-card glass-dark">
+            <h4>Hardware Components</h4>
+            <ul>
+              <li><i class="fa-solid fa-microchip"></i> ESP32 Microcontroller</li>
+              <li><i class="fa-solid fa-microchip"></i> AD8232 ECG Sensor</li>
+              <li><i class="fa-solid fa-microchip"></i> MAX30102 SpO2 Sensor</li>
+              <li><i class="fa-solid fa-microchip"></i> MPU6050 Motion Sensor</li>
+              <li><i class="fa-solid fa-microchip"></i> Microphone Sensor (Respiration/Snore Detection)</li>
+              <li><i class="fa-solid fa-microchip"></i> DS18B20 Temperature Sensor</li>
+              <li><i class="fa-solid fa-microchip"></i> DHT11 Temperature & Humidity Sensor</li>
+              <li><i class="fa-solid fa-microchip"></i> Buzzer Module</li>
+              <li><i class="fa-solid fa-microchip"></i> Battery Monitoring Circuit</li>
+            </ul>
+          </div>
+          <div class="technology-card glass-dark">
+            <h4>Software & Concepts</h4>
+            <ul>
+              <li><i class="fa-solid fa-code"></i> Embedded C / Arduino Framework</li>
+              <li><i class="fa-solid fa-code"></i> FreeRTOS (Real-Time Operating System)</li>
+              <li><i class="fa-solid fa-code"></i> Signal Processing Algorithms (ECG filtering, SpO2 calculation)</li>
+              <li><i class="fa-solid fa-code"></i> Data Compression Techniques</li>
+              <li><i class="fa-solid fa-code"></i> Wireless Communication (ESP-NOW)</li>
+              <li><i class="fa-solid fa-code"></i> Sensor Fusion Algorithms</li>
+              <li><i class="fa-solid fa-code"></i> Real-time Telemetry System</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="glass acknowledgement-footer">
+        <h3>Acknowledgement</h3>
+        <p>Special thanks to Mrs. T. G. Pathan for mentoring, guiding, and supporting throughout this project. Her valuable suggestions and encouragement helped in successfully completing this work.</p>
+        <i class="fa-solid fa-heart"></i>
+        <div class="footer-border"></div>
+      </div>
+      <div class="glass acknowledgement-note">
+        <h3>Note</h3>
+        <p>This project is developed with dedication and sincere effort. If any part of this work unintentionally causes misunderstanding, we express our regret. The intention is purely educational and innovative.</p>
+      </div>
     </div>
-  </nav>
+  </div>
 
-  <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle navigation">
-    <i class="fa-solid fa-bars"></i>
-  </button>
+  <div class="container section">
+    <div class="story-grid">
+      <div class="glass story-img flex-center"><i class="fa-solid fa-bed-pulse" style="font-size:80px; color:var(--neon-blue); opacity:0.5;"></i></div>
+      <div class="story-text">
+        <h2>The Silent Killer in the ICU</h2>
+        <p>Every night, millions suffer from undiagnosed sleep apnea. Prolonged oxygen deprivation leads to hypertension, stroke, and cardiac arrest. Traditional monitors lack predictive intelligence. <strong>Affix-OG changes this.</strong></p>
+        <p>By fusing ESP32 edge sensors with real-time neural networks, we detect anomalies before they become critical—giving clinicians the power to act preemptively.</p>
+      </div>
+    </div>
+  </div>
 
+  <div class="container section">
+    <h2 class="section-title text-center gradient-text">How It Works</h2>
+    <div class="flow-container">
+      <div class="flow-line"></div>
+      <div class="flow-step"><div class="step-icon glass"><i class="fa-solid fa-microchip"></i></div><h4>Sensors</h4><p>12 Biometric Channels</p></div>
+      <div class="flow-step"><div class="step-icon glass"><i class="fa-solid fa-wifi"></i></div><h4>ESP32</h4><p>Edge Pre-Processing</p></div>
+      <div class="flow-step"><div class="step-icon glass"><i class="fa-solid fa-cloud"></i></div><h4>Cloud Stream</h4><p>10Hz WebSocket</p></div>
+      <div class="flow-step"><div class="step-icon glass"><i class="fa-solid fa-brain"></i></div><h4>AI Engine</h4><p>Apnea Prediction</p></div>
+      <div class="flow-step"><div class="step-icon glass"><i class="fa-solid fa-desktop"></i></div><h4>Dashboard</h4><p>ICU Visualization</p></div>
+    </div>
+  </div>
+</section>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       MAIN CONTENT AREA
-       ═══════════════════════════════════════════════════════════════ -->
-  <main id="mainContent" class="main-content">
-
+<!-- ═══ DASHBOARD PAGE ═══ -->
+<section id="page-dashboard" class="page dash-page">
+  <div class="dashboard-grid">
     <!-- Top Bar -->
-    <header class="topbar">
-      <div class="topbar-left">
-        <h2 class="topbar-title" id="topbarTitle">Home</h2>
-      </div>
-      <div class="topbar-right">
-        <span class="topbar-time" id="topbarTime"></span>
-        <button class="settings-btn" id="settingsBtn" aria-label="Settings"><i class="fa-solid fa-gear"></i></button>
-      </div>
-    </header>
-
-    <!-- Settings Panel -->
-    <div class="settings-panel" id="settingsPanel">
-      <div class="settings-panel-header">
-        <h3>Settings & Info</h3>
-        <button class="settings-close" id="settingsClose"><i class="fa-solid fa-xmark"></i></button>
-      </div>
-      <div class="settings-panel-body">
-        <div class="settings-section">
-          <h4><i class="fa-solid fa-code"></i> Developer</h4>
-          <p class="dev-name">Omkar Gaikwad</p>
-          <a href="mailto:omkargaikwad7887@gmail.com" class="dev-email"><i class="fa-solid fa-envelope"></i> omkargaikwad7887@gmail.com</a>
+    <div class="dash-top glass-dark">
+      <div class="patient-info"><i class="fa-solid fa-hospital-user text-neon-blue"></i> <div><strong>John Doe</strong><span>ICU Bed #4 · Male 54y</span></div></div>
+      <div class="dash-controls">
+        <div id="systemStatusIndicator" class="system-status">
+          <span class="status-dot dot-standby"></span> SYSTEM STATUS: OPTIMAL (STANDBY)
         </div>
+        <span id="lastUpdate" class="text-muted text-xs">Awaiting telemetry...</span>
+        <div class="freeze-indicator hidden" id="freezeInd"><i class="fa-solid fa-pause"></i> FROZEN</div>
+        <button id="pdfBtn" class="btn btn-outline-sm"><i class="fa-solid fa-file-pdf"></i> PDF</button>
       </div>
     </div>
 
+    <!-- ECG Section -->
+    <div class="dash-ecg glass-dark crt-monitor">
+      <div class="widget-header"><span class="dot dot-green"></span> ECG Lead II</div>
+      <canvas id="ecgCanvas"></canvas>
+    </div>
 
-    <!-- ═════════════════════════════════════════════════════════════
-         VIEW: HOME (Unchanged from previous build)
-         ═════════════════════════════════════════════════════════════ -->
-    <section id="view-home" class="view active">
-      <!-- Home content remains the same (Hero, Vision, Journey) -->
-      <div class="hero">
-        <div class="hero-grid-bg"></div>
-        <div class="hero-particles" id="heroParticles"></div>
-        <div class="hero-orb hero-orb-1"></div>
-        <div class="hero-orb hero-orb-2"></div>
-        <div class="hero-content">
-          <div class="hero-logo-wrap anim-fade-in"><img src="assets/1000532487.png" alt="Affix-OG" class="hero-logo" /></div>
-          <h1 class="hero-title anim-slide-up"><span class="hero-title-line1">Smart Sleep &</span><span class="hero-title-line2">Health Monitoring</span></h1>
-          <p class="hero-subtitle anim-slide-up anim-delay-2">AI-powered biometric intelligence — 12 vital channels streaming in real-time for proactive health insight.</p>
-          <div class="hero-actions anim-slide-up anim-delay-3">
-            <a href="#" class="btn btn-primary" data-view="dashboard"><i class="fa-solid fa-chart-line"></i> Open Dashboard</a>
+    <!-- SpO2 & HR Section -->
+    <div class="dash-vitals">
+      <div class="vital-box blue glass-dark">
+        <div class="vital-header"><span class="dot dot-blue"></span> SpO2 <span class="trend" id="trendSpo2"></span></div>
+        <div class="vital-value" id="valSpo2">--<span>%</span></div>
+      </div>
+      <div class="vital-box green glass-dark">
+        <div class="vital-header"><span class="dot dot-green"></span> Heart Rate <span class="trend" id="trendHR"></span></div>
+        <div class="vital-value" id="valHR">--<span>bpm</span></div>
+      </div>
+    </div>
+
+    <!-- Parameter Grid -->
+    <div class="dash-params">
+      <div class="param-card glass-dark tooltip" data-tip="Core body temperature"><div class="p-title"><i class="fa-solid fa-temperature-half text-yellow"></i> Body Temp</div><div class="p-val" id="valTemp">--°C</div></div>
+      <div class="param-card glass-dark tooltip" data-tip="Heart Rate Variability (ms)"><div class="p-title"><i class="fa-solid fa-wave-square text-neon-blue"></i> HRV</div><div class="p-val" id="valHRV">--ms</div></div>
+      <div class="param-card glass-dark tooltip" data-tip="Acoustic snoring intensity"><div class="p-title"><i class="fa-solid fa-volume-high text-purple"></i> Snoring</div><div class="p-val" id="valSnore">--dB</div></div>
+      <div class="param-card glass-dark tooltip" data-tip="Apnea events per hour"><div class="p-title"><i class="fa-solid fa-lungs text-red"></i> Apnea Idx</div><div class="p-val" id="valApnea">--/h</div></div>
+      <div class="param-card glass-dark tooltip" data-tip="Ambient room temperature"><div class="p-title"><i class="fa-solid fa-cloud-sun text-neon-blue"></i> Room</div><div class="p-val" id="valRoom">--°C</div></div>
+      <div class="param-card glass-dark tooltip" data-tip="Room humidity percentage"><div class="p-title"><i class="fa-solid fa-droplet text-neon-blue"></i> Humidity</div><div class="p-val" id="valHumid">--%</div></div>
+      <div class="param-card glass-dark tooltip" data-tip="AI calculated health score (0-100)"><div class="p-title"><i class="fa-solid fa-shield-heart text-neon-green"></i> Health AI</div><div class="p-val" id="valScore">--</div></div>
+      <div class="param-card glass-dark tooltip" data-tip="Device battery level"><div class="p-title"><i class="fa-solid fa-battery-three-quarters text-yellow"></i> Battery</div><div class="p-val" id="valBatt">--%</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ ABOUT PAGE ═══ -->
+<section id="page-about" class="page">
+  <div class="container section">
+    <h1 class="section-title gradient-text">About Affix-OG</h1>
+    <div class="about-grid">
+      <div class="glass about-text">
+        <h3>IoT + AI Clinical Revolution</h3>
+        <p>Affix-OG utilizes an ESP32 SoC to stream 12 biometric channels at 10Hz over WebSockets. This real-time data pipeline feeds into our TensorFlow Lite inference engine, deployed on the edge, to detect Obstructive Sleep Apnea (OSA) events with 99.2% accuracy.</p>
+        <p>Our system doesn't just record—it predicts. By analyzing micro-trends in HRV and SpO2 trajectory, Affix-OG alerts clinicians up to 3 minutes before critical desaturation events occur.</p>
+      </div>
+      <div class="glass about-tech">
+        <h3>Technology Stack</h3>
+        <ul>
+          <li><i class="fa-solid fa-microchip"></i> ESP32 Dual-Core WiFi SoC</li>
+          <li><i class="fa-solid fa-server"></i> Node.js + Socket.IO (10Hz)</li>
+          <li><i class="fa-solid fa-brain"></i> TensorFlow Lite Anomaly Detection</li>
+          <li><i class="fa-solid fa-chart-line"></i> HTML5 Canvas Clinical Renderer</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ CONTACT PAGE ═══ -->
+<section id="page-contact" class="page">
+  <div class="container section form-container">
+    <h1 class="section-title">Contact Us</h1>
+    <form class="glass contact-form" onsubmit="event.preventDefault(); alert('Message Sent!');">
+      <div class="input-group"><input type="text" placeholder="Full Name" required></div>
+      <div class="input-group"><input type="email" placeholder="Email Address" required></div>
+      <div class="input-group"><textarea placeholder="Your Message" rows="4" required></textarea></div>
+      <button type="submit" class="btn btn-primary btn-block">Send Message</button>
+    </form>
+  </div>
+</section>
+
+<!-- ═══ AI SUGGESTIONS PAGE ═══ -->
+<section id="page-ai" class="page">
+  <div class="container section">
+    <h1 class="section-title gradient-text">AI Suggestions</h1>
+    <div class="ai-grid">
+      <div class="glass ai-dropzone">
+        <h3>Upload CSV/JSON File</h3>
+        <input type="file" id="aiFileInput" accept=".csv, .json">
+        <button class="btn btn-primary" id="aiAnalyzeBtn">Analyze Live Stream</button>
+      </div>
+      <div class="glass ai-output">
+        <h3>Output Panel</h3>
+        <div id="aiOutput"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ STATUS UPDATES PAGE ═══ -->
+<section id="page-status" class="page">
+  <div class="container section">
+    <h1 class="section-title gradient-text">Status Updates</h1>
+    <div class="status-log">
+      <ul id="statusLogList">
+        <!-- Status log items will be appended here -->
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ PATIENT HISTORY PAGE ═══ -->
+<section id="page-history" class="page">
+  <div class="container section">
+    <h1 class="section-title gradient-text">Patient History</h1>
+    <div class="history-grid">
+      <div class="glass history-card">
+        <h3>Patient Demographics</h3>
+        <table>
+          <tr><th>Name:</th><td>John Doe</td></tr>
+          <tr><th>Age:</th><td>54</td></tr>
+          <tr><th>Diagnosis:</th><td>OSA</td></tr>
+        </table>
+      </div>
+      <div class="glass history-timeline">
+        <h3>Critical Event Timeline</h3>
+        <div class="timeline-container">
+          <!-- Timeline items will be appended here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ DIGITAL TWIN PAGE ═══ -->
+<section id="page-twin" class="page">
+  <div class="container section flex-center">
+    <i class="fa-solid fa-atom" style="font-size: 100px; color: var(--neon-blue);"></i>
+    <h1 class="section-title gradient-text">Digital Twin Architecture</h1>
+    <p>Coming in v5.0</p>
+  </div>
+</section>
+
+<!-- ═══ ACKNOWLEDGEMENT PAGE ═══ -->
+<section id="page-acknowledgement" class="page">
+  <div class="container section">
+    <h1 class="section-title gradient-text">Acknowledgement</h1>
+    <div class="acknowledgement-grid">
+      <div class="glass acknowledgement-hero">
+        <h2 class="gradient-text">Omkar Kiran Gaikwad</h2>
+        <p class="text-digital">Diploma in Medical Electronics, 3rd Year (6th Semester)</p>
+        <p>I am a passionate student in the field of medical electronics, focused on developing innovative healthcare solutions using embedded systems and IoT technologies. This project reflects my interest in combining electronics with healthcare to create practical and impactful systems for patient monitoring.</p>
+      </div>
+      <div class="glass acknowledgement-overview">
+        <h3>Project Overview</h3>
+        <p>This project, titled "Sleep Apnea Multi-Parameter Patient Monitoring System", is a real-time healthcare monitoring system designed to continuously track vital physiological parameters of a patient. The system is built using advanced embedded technology and aims to improve early detection of sleep-related disorders such as sleep apnea.</p>
+        <p>The project focuses on providing accurate, reliable, and real-time monitoring using multiple sensors integrated with an ESP32-based system. It combines signal processing, IoT communication, and intelligent analysis to deliver a clinical-grade monitoring solution.</p>
+      </div>
+      <div class="glass acknowledgement-institution">
+        <h3>Institution Details</h3>
+        <i class="fa-solid fa-building-columns"></i>
+        <p>College Name: Government Polytechnic Miraj</p>
+        <p>This project was developed as part of academic learning and practical implementation in the field of biomedical and embedded systems.</p>
+      </div>
+      <div class="glass acknowledgement-mentor">
+        <h3>Mentor</h3>
+        <i class="fa-solid fa-chalkboard-user"></i>
+        <p>Mentor Name: Mrs. T. G. Pathan</p>
+        <p>We sincerely express our gratitude to our mentor for providing continuous guidance, support, and encouragement throughout the project development.</p>
+        <div class="mentor-border"></div>
+      </div>
+      <div class="glass acknowledgement-features">
+        <h3>Project Features</h3>
+        <div class="feature-grid">
+          <div class="feature-pill glass-dark">Real-time monitoring of vital parameters</div>
+          <div class="feature-pill glass-dark">Multi-sensor data fusion (ECG, SpO2, Respiration, Motion, Temperature)</div>
+          <div class="feature-pill glass-dark">Sleep apnea detection and classification</div>
+          <div class="feature-pill glass-dark">Motion artifact rejection for improved accuracy</div>
+          <div class="feature-pill glass-dark">Smart alert system with priority levels</div>
+          <div class="feature-pill glass-dark">Low-latency wireless communication using ESP-NOW</div>
+          <div class="feature-pill glass-dark">Data compression for efficient transmission</div>
+          <div class="feature-pill glass-dark">AI-based sleep stage and health analysis</div>
+        </div>
+      </div>
+      <div class="glass acknowledgement-parameters">
+        <h3>Parameters Monitored</h3>
+        <div class="parameter-grid">
+          <div class="parameter-pill glass-dark">Heart Rate (ECG & PPG)</div>
+          <div class="parameter-pill glass-dark">Blood Oxygen (SpO2)</div>
+          <div class="parameter-pill glass-dark">Respiration Rate</div>
+          <div class="parameter-pill glass-dark">Heart Rate Variability (HRV)</div>
+          <div class="parameter-pill glass-dark">Motion Activity</div>
+          <div class="parameter-pill glass-dark">Sleep Stage</div>
+          <div class="parameter-pill glass-dark">Apnea Detection</div>
+          <div class="parameter-pill glass-dark">Temperature & Humidity</div>
+          <div class="parameter-pill glass-dark">Battery Status</div>
+          <div class="parameter-pill glass-dark">Signal Quality Index</div>
+        </div>
+      </div>
+      <div class="glass acknowledgement-technologies">
+        <h3>Technologies & Components Used</h3>
+        <div class="technology-grid">
+          <div class="technology-card glass-dark">
+            <h4>Hardware Components</h4>
+            <ul>
+              <li><i class="fa-solid fa-microchip"></i> ESP32 Microcontroller</li>
+              <li><i class="fa-solid fa-microchip"></i> AD8232 ECG Sensor</li>
+              <li><i class="fa-solid fa-microchip"></i> MAX30102 SpO2 Sensor</li>
+              <li><i class="fa-solid fa-microchip"></i> MPU6050 Motion Sensor</li>
+              <li><i class="fa-solid fa-microchip"></i> Microphone Sensor (Respiration/Snore Detection)</li>
+              <li><i class="fa-solid fa-microchip"></i> DS18B20 Temperature Sensor</li>
+              <li><i class="fa-solid fa-microchip"></i> DHT11 Temperature & Humidity Sensor</li>
+              <li><i class="fa-solid fa-microchip"></i> Buzzer Module</li>
+              <li><i class="fa-solid fa-microchip"></i> Battery Monitoring Circuit</li>
+            </ul>
+          </div>
+          <div class="technology-card glass-dark">
+            <h4>Software & Concepts</h4>
+            <ul>
+              <li><i class="fa-solid fa-code"></i> Embedded C / Arduino Framework</li>
+              <li><i class="fa-solid fa-code"></i> FreeRTOS (Real-Time Operating System)</li>
+              <li><i class="fa-solid fa-code"></i> Signal Processing Algorithms (ECG filtering, SpO2 calculation)</li>
+              <li><i class="fa-solid fa-code"></i> Data Compression Techniques</li>
+              <li><i class="fa-solid fa-code"></i> Wireless Communication (ESP-NOW)</li>
+              <li><i class="fa-solid fa-code"></i> Sensor Fusion Algorithms</li>
+              <li><i class="fa-solid fa-code"></i> Real-time Telemetry System</li>
+            </ul>
           </div>
         </div>
       </div>
-    </section>
-
-
-    <!-- ═════════════════════════════════════════════════════════════
-         VIEW: DASHBOARD (Secured)
-         ═════════════════════════════════════════════════════════════ -->
-    <section id="view-dashboard" class="view">
-      <div class="dashboard-container" id="dashboardContent">
-        <!-- Action Bar -->
-        <div class="dash-actions">
-          <div class="patient-info-badge">
-            <i class="fa-solid fa-hospital-user"></i>
-            <div>
-              <span>Patient ID: #AFFIX-1024</span>
-              <span class="sub">Bed 4 | ICUs</span>
-            </div>
-          </div>
-          <button id="generatePdfBtn" class="btn btn-ghost"><i class="fa-solid fa-file-pdf"></i> Download Report</button>
-        </div>
-
-        <!-- Live Charts Snapshot Area -->
-        <div class="dash-grid">
-          <div class="glass-card dash-card span-2">
-            <div class="card-header"><i class="fa-solid fa-wave-square"></i> ECG & Vitals Stream</div>
-            <div class="chart-placeholder" id="chartArea">
-              <canvas id="ecgCanvas"></canvas>
-            </div>
-          </div>
-          <div class="glass-card dash-card">
-            <div class="card-header"><i class="fa-solid fa-heart-pulse"></i> Heart Rate</div>
-            <div class="big-stat" id="statHR">--<span>BPM</span></div>
-          </div>
-          <div class="glass-card dash-card">
-            <div class="card-header"><i class="fa-solid fa-droplet"></i> SpO2</div>
-            <div class="big-stat" id="statSpO2">--<span>%</span></div>
-          </div>
-          <div class="glass-card dash-card">
-            <div class="card-header"><i class="fa-solid fa-temperature-half"></i> Body Temp</div>
-            <div class="big-stat" id="statTemp">--<span>°C</span></div>
-          </div>
-          <div class="glass-card dash-card">
-            <div class="card-header"><i class="fa-solid fa-lungs"></i> Respiration</div>
-            <div class="big-stat" id="statResp">--<span>dB</span></div>
-          </div>
-        </div>
+      <div class="glass acknowledgement-footer">
+        <h3>Acknowledgement</h3>
+        <p>Special thanks to Mrs. T. G. Pathan for mentoring, guiding, and supporting throughout this project. Her valuable suggestions and encouragement helped in successfully completing this work.</p>
+        <i class="fa-solid fa-heart"></i>
+        <div class="footer-border"></div>
       </div>
-    </section>
-
-
-    <!-- ═════════════════════════════════════════════════════════════
-         VIEW: AI SUGGESTIONS
-         ═════════════════════════════════════════════════════════════ -->
-    <section id="view-ai-suggestions" class="view">
-      <div class="view-inner">
-        <div class="section-header">
-          <span class="section-tag">Rule-Based Intelligence</span>
-          <h2 class="section-title">AI Diagnostic Assistant</h2>
-        </div>
-
-        <div class="ai-layout">
-          <!-- Upload Dropzone -->
-          <div class="glass-card ai-upload-zone">
-            <div class="dropzone" id="aiDropzone">
-              <i class="fa-solid fa-cloud-arrow-up"></i>
-              <h3>Upload Patient Data</h3>
-              <p>Drag & drop CSV/JSON or click to browse</p>
-              <input type="file" id="fileInput" hidden accept=".csv,.json" />
-            </div>
-            <button id="analyzeLiveBtn" class="btn btn-primary" style="margin-top: 16px; width: 100%;">
-              <i class="fa-solid fa-satellite-dish"></i> Analyze Live Stream
-            </button>
-          </div>
-
-          <!-- AI Output -->
-          <div class="glass-card ai-output">
-            <div class="ai-output-header">
-              <i class="fa-solid fa-robot"></i> Clinical Analysis
-            </div>
-            <div id="aiAnalysisContent" class="ai-analysis-body">
-              <div class="ai-idle">
-                <i class="fa-solid fa-circle-nodes"></i>
-                <p>Awaiting data input for rule evaluation...</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div class="glass acknowledgement-note">
+        <h3>Note</h3>
+        <p>This project is developed with dedication and sincere effort. If any part of this work unintentionally causes misunderstanding, we express our regret. The intention is purely educational and innovative.</p>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
+</main>
 
-    <!-- ═════════════════════════════════════════════════════════════
-         VIEW: STATUS UPDATES
-         ═════════════════════════════════════════════════════════════ -->
-    <section id="view-status-updates" class="view">
-      <div class="view-inner">
-        <div class="section-header">
-          <span class="section-tag">Alerts & Notifications</span>
-          <h2 class="section-title">Status Updates</h2>
-        </div>
-        <div class="status-log glass-card">
-          <ul id="statusLogList" class="log-list">
-            <!-- Populated by JS -->
-          </ul>
-          <div class="log-empty" id="logEmpty"><i class="fa-solid fa-bell-slash"></i> No active alerts. System nominal.</div>
-        </div>
-      </div>
-    </section>
+<!-- ─── AUTH MODAL ─────────────────────────── -->
+<div id="authModal" class="modal-overlay hidden">
+  <div class="modal-glass">
+    <h2><i class="fa-solid fa-shield-halved text-neon-blue"></i> Clinical Authorization</h2>
+    <p>Access patient telemetry dashboard</p>
+    <form id="loginForm">
+      <div class="input-group"><input type="text" id="loginId" placeholder="Physician ID" required></div>
+      <div class="input-group"><input type="password" id="loginPass" placeholder="Access Code" required></div>
+      <div id="loginError" class="text-red hidden" style="margin-bottom:12px; font-size:12px;">Invalid Credentials</div>
+      <button type="submit" class="btn btn-primary btn-block">Authenticate</button>
+    </form>
+  </div>
+</div>
 
+<!-- ─── FOOTER ─────────────────────────────── -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="footer-brand"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Affix-OG</div>
+    <div class="footer-links"><a href="#" data-page="home">Home</a> <a href="#" data-page="dashboard">Dashboard</a> <a href="#" data-page="about">About</a></div>
+    <div class="footer-copy">&copy; 2024 Affix-OG. Developed by Omkar Gaikwad</div>
+  </div>
+</footer>
 
-    <!-- ═════════════════════════════════════════════════════════════
-         VIEW: PATIENT HISTORY
-         ═════════════════════════════════════════════════════════════ -->
-    <section id="view-patient-history" class="view">
-      <div class="view-inner">
-        <div class="section-header">
-          <span class="section-tag">Records</span>
-          <h2 class="section-title">Patient History</h2>
-        </div>
-        
-        <div class="history-grid">
-          <div class="glass-card">
-            <h3 class="card-title"><i class="fa-solid fa-user-clock"></i> Demographics</h3>
-            <table class="data-table">
-              <tbody>
-                <tr><td>Patient ID</td><td>#AFFIX-1024</td></tr>
-                <tr><td>Name</td><td>John Doe</td></tr>
-                <tr><td>Age / Sex</td><td>54 / Male</td></tr>
-                <tr><td>Diagnosis</td><td>Obstructive Sleep Apnea</td></tr>
-                <tr><td>Admit Date</td><td>2023-10-12</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="glass-card">
-            <h3 class="card-title"><i class="fa-solid fa-timeline"></i> Critical Event Timeline</h3>
-            <div class="mini-timeline">
-              <div class="mini-tl-item"><span class="tl-time">Oct 12, 03:22</span> Severe Apnea Episode (SpO2 82%)</div>
-              <div class="mini-tl-item"><span class="tl-time">Oct 14, 11:10</span> CPAP Therapy Initiated</div>
-              <div class="mini-tl-item"><span class="tl-time">Oct 16, 04:05</span> Tachycardia Alert (HR 112)</div>
-              <div class="mini-tl-item"><span class="tl-time">Oct 20, 09:30</span> Stable Discharge Evaluation</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-
-    <!-- ═════════════════════════════════════════════════════════════
-         VIEW: DIGITAL TWIN
-         ═════════════════════════════════════════════════════════════ -->
-    <section id="view-digital-twin" class="view">
-      <div class="construction-placeholder">
-        <div class="construction-glow"></div>
-        <i class="fa-solid fa-atom"></i>
-        <h2>Digital Twin</h2>
-        <p>System Under Construction</p>
-        <span class="construction-badge">Coming in v2.0</span>
-      </div>
-    </section>
-
-  </main>
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

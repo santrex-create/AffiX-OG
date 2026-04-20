@@ -1,27 +1,55 @@
-# Dependencies
-node_modules/
+# =============================================================================
+# Affix-OG · Git Ignore
+# =============================================================================
 
-# Environment variables
+# ─── Dependencies ────────────────────────────────────────────────────────────
+node_modules/
+package-lock.json # Optional: uncomment if you want to ignore lock files, but generally NOT recommended for apps
+
+# ─── Environment Variables ───────────────────────────────────────────────────
 .env
 .env.local
-.env.production
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Logs
+# ─── Logs ────────────────────────────────────────────────────────────────────
 logs/
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# OS generated files
+# ─── Runtime Data ────────────────────────────────────────────────────────────
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ─── IDE / Editor Directories ────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*~
+
+# ─── OS Generated Files ─────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 desktop.ini
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Build / dist (future use)
+# ─── Coverage / Build ───────────────────────────────────────────────────────
+coverage/
 dist/
 build/
+.npm/

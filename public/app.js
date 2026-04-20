@@ -1,443 +1,432 @@
 // =================================================================
-// Affix-OG · app.js — Advanced Full-Stack Frontend Logic v1.1.0
+// Affix-OG · ICU-Grade Frontend Logic v4.0
 // =================================================================
-
 const socket = io();
 
-// ─── State ──────────────────────────────────────────────────────────
-let dataBuffer = []; // Holds last 80 data points for PDF & AI
+// ——— State ———
 let isAuth = localStorage.getItem('affix_auth') === 'true';
-const AUTH_CREDS = { id: 'abcd', pass: 'abcd1234' };
+let isFrozen = false;
+let dataBuffer = [];
+let prevValues = { spo2: 0, heart_rate: 0 };
+let lastUpdateTime = {};
 
-// ─── DOM References ─────────────────────────────────────────────────
-const sidebar = document.getElementById('sidebar');
-const sidebarToggle = document.getElementById('sidebarToggle');
-const navLinks = document.querySelectorAll('.nav-link');
-const views = document.querySelectorAll('.view');
-const topbarTitle = document.getElementById('topbarTitle');
-const topbarTime = document.getElementById('topbarTime');
-const settingsBtn = document.getElementById('settingsBtn');
-const settingsPanel = document.getElementById('settingsPanel');
-const settingsClose = document.getElementById('settingsClose');
-const connectionBadge = document.getElementById('connectionBadge');
+// ——— Hardware Telemetry State ———
+let hardwareActive = false;
+let hardwareTimeout = null;
 
-// Security
-const securityModal = document.getElementById('securityModal');
-const loginForm = document.getElementById('loginForm');
-const loginError = document.getElementById('loginError');
-
-// Dashboard
-const ecgCanvas = document.getElementById('ecgCanvas');
-const ecgCtx = ecgCanvas ? ecgCanvas.getContext('2d') : null;
-const generatePdfBtn = document.getElementById('generatePdfBtn');
-
-// AI
-const aiDropzone = document.getElementById('aiDropzone');
-const fileInput = document.getElementById('fileInput');
-const analyzeLiveBtn = document.getElementById('analyzeLiveBtn');
-const aiAnalysisContent = document.getElementById('aiAnalysisContent');
-
-// Status
-const statusLogList = document.getElementById('statusLogList');
-const logEmpty = document.getElementById('logEmpty');
-
-
-// ═══════════════════════════════════════════════════════════════════
-// 1. NAVIGATION & VIEW SYSTEM
-// ═══════════════════════════════════════════════════════════════════
-function switchView(viewName) {
-  // Security Gateway Check for Dashboard
-  if (viewName === 'dashboard' && !isAuth) {
-    securityModal.classList.add('active');
-    return; // Don't switch yet
-  }
-
-  navLinks.forEach(link => link.classList.toggle('active', link.dataset.view === viewName));
-  views.forEach(view => view.classList.toggle('active', view.id === `view-${viewName}`));
-  
-  const titles = {
-    'home': 'Home', 'dashboard': 'Dashboard', 'ai-suggestions': 'AI Suggestions',
-    'status-updates': 'Status Updates', 'patient-history': 'Patient History', 'digital-twin': 'Digital Twin'
-  };
-  topbarTitle.textContent = titles[viewName] || viewName;
-
-  // Close sidebar on mobile after navigation
-  if (window.innerWidth <= 768) sidebar.classList.remove('open');
+// ——— Audio Context for Alerts ———
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function playAlertBeep() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.frequency.value = 880;
+  osc.type = 'sine';
+  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.3);
 }
 
-navLinks.forEach(link => link.addEventListener('click', (e) => {
-  e.preventDefault();
-  switchView(link.dataset.view);
-}));
-
-// Hero buttons / inline view triggers
-document.querySelectorAll('[data-view]').forEach(el => {
-  if (!el.classList.contains('nav-link')) {
-    el.addEventListener('click', (e) => { e.preventDefault(); switchView(el.dataset.view); });
-  }
+// ——— SPA Router ———
+document.querySelectorAll('[data-page]').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    const page = el.dataset.page;
+    if (page === 'dashboard' && !isAuth) {
+      document.getElementById('authModal').classList.remove('hidden');
+      return;
+    }
+    navigateTo(page);
+  });
 });
 
-// UI Toggles
-sidebarToggle.addEventListener('click', () => sidebar.classList.toggle('open'));
-settingsBtn.addEventListener('click', () => settingsPanel.classList.add('open'));
-settingsClose.addEventListener('click', () => settingsPanel.classList.remove('open'));
+function navigateTo(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.toggle('active', l.dataset.page === page));
+  window.scrollTo(0, 0);
 
-// Close settings on outside click
-document.addEventListener('click', (e) => {
-  if (settingsPanel.classList.contains('open') && !settingsPanel.contains(e.target) && !settingsBtn.contains(e.target)) {
-    settingsPanel.classList.remove('open');
+  if (page === 'dashboard') {
+    setTimeout(() => {
+      resizeCanvas();
+      // Clear the canvas from previous stale state
+      if (ctx && canvas) {
+        ctx.fillStyle = '#020408';
+        ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+      }
+    }, 50);
   }
-});
+}
 
-
-// ═══════════════════════════════════════════════════════════════════
-// 2. SECURITY GATEWAY
-// ═══════════════════════════════════════════════════════════════════
-loginForm.addEventListener('submit', (e) => {
+// ——— Auth System ———
+document.getElementById('loginForm').addEventListener('submit', (e) => {
   e.preventDefault();
-  const id = document.getElementById('loginId').value;
-  const pass = document.getElementById('loginPass').value;
-
-  if (id === AUTH_CREDS.id && pass === AUTH_CREDS.pass) {
+  if (document.getElementById('loginId').value === 'abcd' && document.getElementById('loginPass').value === 'abcd1234') {
     isAuth = true;
     localStorage.setItem('affix_auth', 'true');
-    securityModal.classList.remove('active');
-    switchView('dashboard'); // Proceed to dashboard on success
+    document.getElementById('authModal').classList.add('hidden');
+    navigateTo('dashboard');
   } else {
-    loginError.classList.add('show');
-    setTimeout(() => loginError.classList.remove('show'), 3000);
+    document.getElementById('loginError').classList.remove('hidden');
+    setTimeout(() => document.getElementById('loginError').classList.add('hidden'), 3000);
+  }
+});
+document.getElementById('authBtn').addEventListener('click', () => document.getElementById('authModal').classList.toggle('hidden'));
+
+// ——— 60fps True-Phase ECG Engine ———
+// Instead of relying on network packets (which cause jitter), we use the HR value
+// from the telemetry to locally calculate the phase of the PQRST wave at 60fps.
+const canvas = document.getElementById('ecgCanvas');
+const ctx = canvas.getContext('2d');
+let currentHR = 72;
+let ecgPhase = 0;
+let lastFrameTime = performance.now();
+let ecgYData = [];
+let writeHeadX = 0;
+
+function resizeCanvas() {
+  const parent = canvas.parentElement;
+  if (!parent || parent.clientWidth === 0) return;
+  canvas.width = parent.clientWidth * window.devicePixelRatio;
+  canvas.height = parent.clientHeight * window.devicePixelRatio;
+  canvas.style.width = `${parent.clientWidth}px`;
+  canvas.style.height = `${parent.clientHeight}px`;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  writeHeadX = 0;
+  ecgYData = new Array(canvas.width).fill(0);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Mathematical PQRST waveform generation
+function getPQRSTValue(phase) {
+  let val = 0;
+  const t = phase;
+  if (t < 0.8) val = 0.15 * Math.sin((t/0.8)*Math.PI);
+  else if (t >= 1.0 && t < 1.15) val = -0.2;
+  else if (t >= 1.15 && t < 1.3) val = 1.2 * Math.sin(((t-1.15)/0.15)*Math.PI);
+  else if (t >= 1.3 && t < 1.45) val = -0.3;
+  else if (t >= 2.0 && t < 3.0) val = 0.3 * Math.sin(((t-2.0)/1.0)*Math.PI);
+  else val = (Math.random()-0.5)*0.015;
+  return val;
+}
+
+function drawECGLoop(timestamp) {
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  const dt = (timestamp - lastFrameTime) / 1000;
+  lastFrameTime = timestamp;
+
+  if (!isFrozen) {
+    // Calculate phase advancement based on current HR (BPM to cycles per second)
+    const cyclesPerSecond = currentHR / 60;
+    ecgPhase += cyclesPerSecond * dt * 2 * Math.PI;
+    if (ecgPhase > Math.PI * 2) ecgPhase -= Math.PI * 2;
+
+    // Get Y coordinate
+    const yVal = getPQRSTValue(ecgPhase);
+
+    // Draw single vertical line to erase trail, then plot new point
+    const midY = h / 2;
+    const amp = (h / 2) * 0.7;
+
+    // Eraser Head (Gap)
+    ctx.fillStyle = '#020408';
+    ctx.fillRect(writeHeadX, 0, 30, h);
+
+    // Draw Grid behind eraser (to maintain grid continuity)
+    ctx.strokeStyle = 'rgba(0, 255, 0, 0.04)';
+    ctx.lineWidth = 1;
+    for (let gy = 0; gy < h; gy += 25) { ctx.beginPath(); ctx.moveTo(writeHeadX, gy); ctx.lineTo(writeHeadX + 30, gy); ctx.stroke(); }
+
+    // Plot point
+    const plotY = midY - yVal * amp;
+    ecgYData[writeHeadX] = plotY;
+    ctx.fillStyle = '#39ff14';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#39ff14';
+    ctx.beginPath();
+    ctx.arc(writeHeadX, plotY, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Draw trailing wave
+    ctx.strokeStyle = '#39ff14';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, ecgYData[0]);
+    for (let i = 1; i < w; i++) {
+      ctx.lineTo(i, ecgYData[i]);
+    }
+    ctx.stroke();
+
+    // Advance sweep
+    writeHeadX += 2;
+    if (writeHeadX > w) writeHeadX = 0;
+  }
+
+  requestAnimationFrame(drawECGLoop);
+}
+requestAnimationFrame(drawECGLoop);
+
+// ——— Freeze Function (Spacebar) ———
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && document.getElementById('page-dashboard').classList.contains('active')) {
+    e.preventDefault();
+    isFrozen = !isFrozen;
+    document.getElementById('freezeInd').classList.toggle('hidden', !isFrozen);
   }
 });
 
+// ——— Real-Time Data Throttling Engine ———
+const throttleConfig = {
+  spo2: 2000,
+  heart_rate: 2000,
+  body_temp: 5000,
+  hrv_raw: 2000,
+  snoring_level: 4000,
+  apnea_index: 60000,
+  room_temp: 30000,
+  humidity: 30000,
+  battery_level: 15000,
+  health_score: 5000
+};
 
-// ═══════════════════════════════════════════════════════════════════
-// 3. REAL-TIME DATA & ECG CANVAS RENDERING
-// ═══════════════════════════════════════════════════════════════════
+function updateParam(key, value, elemId, suffix='', decimal=0) {
+  const now = Date.now();
+  if (!lastUpdateTime[key] || now - lastUpdateTime[key] >= throttleConfig[key]) {
+    const el = document.getElementById(elemId);
+    if(el) el.innerText = `${value.toFixed(decimal)}${suffix}`;
+    lastUpdateTime[key] = now;
+  }
+}
+
+// ——— Socket Telemetry Listener & Hardware Switch ———
 socket.on('bio:data', (data) => {
-  window.__latestBioData = data;
-  
-  // Buffer logic (Keep last 80 points for AI and PDF)
+  window.__liveData = data;
   dataBuffer.push(data);
   if (dataBuffer.length > 80) dataBuffer.shift();
 
-  // Update Dashboard Stats only if dashboard is active
-  const dashView = document.getElementById('view-dashboard');
-  if (dashView && dashView.classList.contains('active')) {
-    document.getElementById('statHR').innerHTML = `${data.heart_rate}<span>BPM</span>`;
-    document.getElementById('statSpO2').innerHTML = `${data.spo2}<span>%</span>`;
-    document.getElementById('statTemp').innerHTML = `${data.body_temp}<span>°C</span>`;
-    document.getElementById('statResp').innerHTML = `${data.respiratory_sound}<span>dB</span>`;
+  // ——— Invisible Auto-Switch Logic ———
+  if (data.isHardware) {
+    if (!hardwareActive) {
+      hardwareActive = true;
+      updateSystemStatus(true);
+    }
+    // Reset the 10s timeout
+    clearTimeout(hardwareTimeout);
+    hardwareTimeout = setTimeout(() => {
+      hardwareActive = false;
+      updateSystemStatus(false);
+    }, 10000);
   }
+
+  // Update local ECG driver HR
+  currentHR = data.heart_rate || 72;
+
+  if (!document.getElementById('page-dashboard').classList.contains('active') || isFrozen) return;
+
+  document.getElementById('lastUpdate').innerText = `Telemetry: ${new Date().toLocaleTimeString()}`;
+
+  // SpO2
+  if (Date.now() - (lastUpdateTime.spo2 || 0) >= throttleConfig.spo2) {
+    const spo2El = document.getElementById('valSpo2');
+    spo2El.innerHTML = `${data.spo2.toFixed(1)}<span>%</span>`;
+    spo2El.parentElement.style.borderColor = data.spo2 < 90 ? 'var(--neon-red)' : data.spo2 < 94 ? 'var(--neon-orange)' : 'rgba(0,212,255,0.15)';
+    updateTrend('trendSpo2', data.spo2, prevValues.spo2);
+    prevValues.spo2 = data.spo2;
+    lastUpdateTime.spo2 = Date.now();
+  }
+
+  // HR
+  if (Date.now() - (lastUpdateTime.heart_rate || 0) >= throttleConfig.heart_rate) {
+    const hrEl = document.getElementById('valHR');
+    hrEl.innerHTML = `${Math.round(data.heart_rate)}<span>bpm</span>`;
+    hrEl.parentElement.style.borderColor = data.heart_rate > 100 ? 'var(--neon-orange)' : 'rgba(57,255,20,0.15)';
+    updateTrend('trendHR', data.heart_rate, prevValues.heart_rate);
+    prevValues.heart_rate = data.heart_rate;
+    lastUpdateTime.heart_rate = Date.now();
+  }
+
+  // Low Freq Params
+  updateParam('body_temp', data.body_temp, 'valTemp', '°C', 1);
+  updateParam('hrv_raw', data.hrv_raw, 'valHRV', 'ms', 0);
+  updateParam('snoring_level', data.snoring_level, 'valSnore', 'dB', 1);
+  updateParam('apnea_index', data.apnea_index, 'valApnea', '/h', 1);
+  updateParam('room_temp', data.room_temp, 'valRoom', '°C', 1);
+  updateParam('humidity', data.humidity, 'valHumid', '%', 1);
+  updateParam('battery_level', data.battery_level, 'valBatt', '%', 1);
+
+  // Health Score
+  if (Date.now() - (lastUpdateTime.health_score || 0) >= throttleConfig.health_score) {
+    const scoreEl = document.getElementById('valScore');
+    scoreEl.innerText = Math.round(data.health_score);
+    scoreEl.style.color = data.health_score > 85 ? 'var(--neon-green)' : data.health_score > 60 ? 'var(--neon-yellow)' : 'var(--neon-red)';
+    lastUpdateTime.health_score = Date.now();
+  }
+
+  checkAlerts(data);
 });
 
-// High-Performance ECG Canvas Renderer
-let ecgHistory = new Array(200).fill(0);
-let animationFrameId;
-
-function drawECG() {
-  if (!ecgCtx || !ecgCanvas) return;
-  
-  const parent = ecgCanvas.parentElement;
-  if (!parent) return;
-
-  // Handle High-DPI displays
-  const dpr = window.devicePixelRatio || 1;
-  const rect = parent.getBoundingClientRect();
-  
-  ecgCanvas.width = rect.width * dpr;
-  ecgCanvas.height = rect.height * dpr;
-  ecgCanvas.style.width = `${rect.width}px`;
-  ecgCanvas.style.height = `${rect.height}px`;
-  ecgCtx.scale(dpr, dpr);
-
-  const latest = window.__latestBioData;
-  if (latest) {
-    ecgHistory.push(latest.ecg_val);
-    if (ecgHistory.length > 200) ecgHistory.shift();
-  }
-
-  ecgCtx.clearRect(0, 0, rect.width, rect.height);
-  
-  // Draw Grid
-  ecgCtx.strokeStyle = 'rgba(0, 242, 255, 0.05)';
-  ecgCtx.lineWidth = 1;
-  for (let i = 0; i < rect.width; i += 20) {
-    ecgCtx.beginPath(); ecgCtx.moveTo(i, 0); ecgCtx.lineTo(i, rect.height); ecgCtx.stroke();
-  }
-  for (let i = 0; i < rect.height; i += 20) {
-    ecgCtx.beginPath(); ecgCtx.moveTo(0, i); ecgCtx.lineTo(rect.width, i); ecgCtx.stroke();
-  }
-
-  // Draw ECG Line
-  ecgCtx.beginPath();
-  ecgCtx.strokeStyle = '#00f2ff';
-  ecgCtx.lineWidth = 2;
-  ecgCtx.shadowBlur = 8;
-  ecgCtx.shadowColor = '#00f2ff';
-  ecgCtx.lineJoin = 'round';
-
-  const stepX = rect.width / 200;
-  const midY = rect.height / 2;
-  const amplitude = (rect.height / 2) * 0.8;
-
-  for (let i = 0; i < ecgHistory.length; i++) {
-    const x = i * stepX;
-    const y = midY - (ecgHistory[i] * amplitude);
-    if (i === 0) ecgCtx.moveTo(x, y);
-    else ecgCtx.lineTo(x, y);
-  }
-  ecgCtx.stroke();
-  ecgCtx.shadowBlur = 0; // Reset shadow
-
-  animationFrameId = requestAnimationFrame(drawECG);
+function updateTrend(id, curr, prev) {
+  const el = document.getElementById(id);
+  if (curr > prev + 0.2) el.innerHTML = '<span style="color:var(--neon-orange)">▲</span>';
+  else if (curr < prev - 0.2) el.innerHTML = '<span style="color:var(--neon-blue)">▼</span>';
+  else el.innerHTML = '<span style="color:rgba(255,255,255,0.3)">►</span>';
 }
 
+// ——— Stealth UI Status Update ———
+function updateSystemStatus(isLive) {
+  const indicator = document.getElementById('systemStatusIndicator');
+  if (isLive) {
+    indicator.innerHTML = '<span class="status-dot dot-live"></span> SYSTEM STATUS: OPTIMAL (LIVE TELEMETRY)';
+  } else {
+    indicator.innerHTML = '<span class="status-dot dot-standby"></span> SYSTEM STATUS: OPTIMAL (STANDBY)';
+  }
+}
 
-// ═══════════════════════════════════════════════════════════════════
-// 4. PDF HOSPITAL REPORT (jsPDF + html2canvas)
-// ═══════════════════════════════════════════════════════════════════
-generatePdfBtn.addEventListener('click', async () => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('p', 'mm', 'a4');
-  
-  // Header
-  doc.setFillColor(5, 5, 5);
-  doc.rect(0, 0, 210, 40, 'F');
-  doc.setTextColor(0, 242, 255);
-  doc.setFontSize(24);
-  doc.text('Affix-OG Clinical Report', 20, 25);
-  doc.setTextColor(150);
-  doc.setFontSize(10);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 33);
+// ——— Intelligent Alert System ———
+let activeAlertTimeout;
+function checkAlerts(d) {
+  const banner = document.getElementById('alertBanner');
+  let trigger = false, title = '', msg = '', color = '';
 
-  // Patient Info
-  doc.setTextColor(50);
-  doc.setFontSize(12);
-  doc.text('Patient: John Doe | ID: #AFFIX-1024 | Diagnosis: Obstructive Sleep Apnea', 20, 50);
-
-  // Chart Snapshot
-  doc.setTextColor(150);
-  doc.setFontSize(10);
-  doc.text('Vital Signs Snapshot:', 20, 60);
-  
-  const chartArea = document.getElementById('dashboardContent');
-  try {
-    // Force black background for the capture so text is visible
-    const canvas = await html2canvas(chartArea, { 
-      backgroundColor: '#050505', 
-      scale: 2,
-      useCORS: true
-    });
-    const imgData = canvas.toDataURL('image/png');
-    doc.addImage(imgData, 'PNG', 10, 65, 190, 100);
-  } catch (e) {
-    doc.text('Could not capture chart snapshot', 20, 70);
+  if (d.spo2 < 90) {
+    trigger = true;
+    title = 'CRITICAL: Severe Hypoxemia';
+    msg = `SpO2 dropped to ${d.spo2}%`;
+    color = 'var(--neon-red)';
+  } else if (d.heart_rate > 100) {
+    trigger = true;
+    title = 'WARNING: Tachycardia';
+    msg = `HR elevated at ${Math.round(d.heart_rate)} BPM`;
+    color = 'var(--neon-orange)';
+  } else if (d.apnea_index > 8) {
+    trigger = true;
+    title = 'HIGH: Severe Apnea Events';
+    msg = `Index at ${d.apnea_index}/hour`;
+    color = 'var(--neon-yellow)';
   }
 
-  // Data Table (Last 80 params)
-  let startY = 175;
-  doc.setFontSize(12);
-  doc.setTextColor(0, 242, 255);
-  doc.text('Last 80 Biometric Readings (Raw Data Extract)', 20, startY);
-  startY += 8;
-  
-  doc.setFontSize(8);
-  doc.setTextColor(100);
-  doc.setFont(undefined, 'bold');
-  doc.text('Time', 20, startY);
-  const keys = ['spo2', 'heart_rate', 'body_temp', 'ecg_val', 'motion', 'resp_snd'];
-  keys.forEach((k, i) => doc.text(k, 55 + (i*25), startY));
-  doc.setFont(undefined, 'normal');
-  startY += 5;
+  if (trigger) {
+    banner.classList.remove('hidden');
+    banner.style.borderColor = color;
+    document.getElementById('alertTitle').innerText = title;
+    document.getElementById('alertTitle').style.color = color;
+    document.getElementById('alertMsg').innerText = msg;
+    document.querySelector('.alert-icon-box i').style.color = color;
+    document.querySelector('.alert-icon-box').style.animation = color === 'var(--neon-red)' ? 'blink 0.5s infinite' : 'blink 1.5s infinite';
+    playAlertBeep();
+    clearTimeout(activeAlertTimeout);
+    activeAlertTimeout = setTimeout(() => banner.classList.add('hidden'), 5000);
+  }
+}
 
+// ——— System Check (Stealth Demo) Trigger ———
+// This triggers the server's "Baseline" to simulate an apnea event for UI testing
+document.getElementById('systemCheckBtn').addEventListener('click', () => {
+  if(!isAuth) { isAuth = true; localStorage.setItem('affix_auth', 'true'); }
+  navigateTo('dashboard');
+  socket.emit('trigger:baselineCheck', true);
+  setTimeout(() => socket.emit('trigger:baselineCheck', false), 30000);
+});
+
+// ——— PDF Generation ———
+document.getElementById('pdfBtn').addEventListener('click', () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFillColor(5, 5, 5);
+  doc.rect(0, 0, 210, 40, 'F');
+  doc.setTextColor(0, 212, 255);
+  doc.setFontSize(22);
+  doc.text('Affix-OG Clinical Report', 20, 25);
   doc.setTextColor(50);
-  dataBuffer.forEach((row) => {
-    if (startY > 280) { 
-      doc.addPage(); 
-      startY = 20; 
-    }
-    doc.text(new Date(row._timestamp).toLocaleTimeString(), 20, startY);
-    doc.text(String(row.spo2), 55, startY);
-    doc.text(String(row.heart_rate), 80, startY);
-    doc.text(String(row.body_temp), 105, startY);
-    doc.text(String(row.ecg_val), 130, startY);
-    doc.text(String(row.motion), 155, startY);
-    doc.text(String(row.respiratory_sound), 180, startY);
-    startY += 4;
-  });
-
+  doc.setFontSize(12);
+  doc.text('Patient: John Doe | ID: #1024 | Generated: ' + new Date().toLocaleString(), 20, 50);
+  let y = 65;
+  doc.setFontSize(10);
+  const latest = window.__liveData || {};
+  [['SpO2', `${latest.spo2||'--'}%`], ['Heart Rate', `${latest.heart_rate||'--'} BPM`], ['Body Temp', `${latest.body_temp||'--'}°C`], ['Apnea Index', `${latest.apnea_index||'--'}/h`]]
+  .forEach(p => { doc.setTextColor(100); doc.text(p[0], 20, y); doc.setTextColor(0, 212, 255); doc.text(p[1], 80, y); y+=8; });
   doc.save('Affix-OG_Clinical_Report.pdf');
 });
 
-
-// ═══════════════════════════════════════════════════════════════════
-// 5. AI SUGGESTIONS (Rule-Based + File Upload)
-// ═══════════════════════════════════════════════════════════════════
-
-// File Upload Dropzone Listeners
-aiDropzone.addEventListener('click', () => fileInput.click());
-aiDropzone.addEventListener('dragover', (e) => { e.preventDefault(); aiDropzone.classList.add('dragover'); });
-aiDropzone.addEventListener('dragleave', () => aiDropzone.classList.remove('dragover'));
-aiDropzone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  aiDropzone.classList.remove('dragover');
-  analyzeFile(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener('change', (e) => analyzeFile(e.target.files[0]));
-
-function analyzeFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const data = JSON.parse(e.target.result);
-      runRuleEngine(Array.isArray(data) ? data : [data]);
-    } catch {
-      // If file is invalid, fallback to live buffer
-      runRuleEngine(dataBuffer.length > 0 ? dataBuffer : []);
+// ——— AI Suggestions ———
+document.getElementById('aiAnalyzeBtn').addEventListener('click', () => {
+  const dataArray = dataBuffer.slice(-80);
+  const result = runAIAnalysis(dataArray);
+  const outputPanel = document.getElementById('aiOutput');
+  outputPanel.innerHTML = '';
+  result.forEach(item => {
+    const alertEl = document.createElement('div');
+    alertEl.classList.add('ai-alert');
+    if (item.severity === 'critical') {
+      alertEl.classList.add('critical');
+    } else if (item.severity === 'warning') {
+      alertEl.classList.add('warning');
     }
-  };
-  reader.readAsText(file);
-}
-
-analyzeLiveBtn.addEventListener('click', () => {
-  if (dataBuffer.length === 0) {
-    aiAnalysisContent.innerHTML = `<div class="ai-idle"><i class="fa-solid fa-circle-exclamation"></i><p>No live data buffered yet. Please wait for the stream to accumulate.</p></div>`;
-    return;
-  }
-  runRuleEngine(dataBuffer);
+    alertEl.innerText = item.message;
+    outputPanel.appendChild(alertEl);
+  });
 });
 
-function runRuleEngine(dataSet) {
-  const alerts = [];
-  
-  // Mathematical Helpers
-  const avg = (key) => dataSet.reduce((sum, d) => sum + (d[key]||0), 0) / dataSet.length;
-  const min = (key) => Math.min(...dataSet.map(d => d[key]||0));
-  const max = (key) => Math.max(...dataSet.map(d => d[key]||0));
-
-  const avgSpO2 = avg('spo2');
-  const minSpO2 = min('spo2');
-  const avgHR = avg('heart_rate');
-  const maxHR = max('heart_rate');
-  const minHR = min('heart_rate');
-  const avgTemp = avg('body_temp');
-  const avgMotion = avg('motion');
-
-  // Clinical Rules
-  if (minSpO2 < 90) {
-    alerts.push({ type: 'critical', title: 'Severe Hypoxemia Detected', msg: `SpO2 dropped to ${minSpO2.toFixed(1)}%. Immediate oxygen therapy recommended. Risk of hypoxic brain injury.` });
-  } else if (avgSpO2 < 94) {
-    alerts.push({ type: 'warning', title: 'Mild Hypoxemia / Apnea Indication', msg: `Average SpO2 is ${avgSpO2.toFixed(1)}%. Patient may require supplemental oxygen or CPAP evaluation during sleep.` });
-  } else {
-    alerts.push({ type: 'normal', title: 'Oxygenation Normal', msg: `SpO2 levels stable at ${avgSpO2.toFixed(1)}%. No hypoxemia detected.` });
+function runAIAnalysis(dataArray) {
+  const result = [];
+  const spo2Values = dataArray.map(item => item.spo2);
+  const heartRateValues = dataArray.map(item => item.heart_rate);
+  const averageSpO2 = spo2Values.reduce((a, b) => a + b, 0) / spo2Values.length;
+  const averageHeartRate = heartRateValues.reduce((a, b) => a + b, 0) / heartRateValues.length;
+  if (averageSpO2 < 94) {
+    result.push({ severity: 'critical', message: 'Hypoxemia detected' });
   }
-
-  if (maxHR > 110) {
-    alerts.push({ type: 'critical', title: 'Tachycardia Event Captured', msg: `Heart rate peaked at ${Math.round(maxHR)} BPM. Possible cardiac stress, sleep terror, or apneic arousal event.` });
-  } else if (avgHR > 85) {
-    alerts.push({ type: 'warning', title: 'Elevated Heart Rate', msg: `Average HR is ${Math.round(avgHR)} BPM. Monitor for sustained tachycardia or pain response.` });
-  } else if (minHR < 50) {
-    alerts.push({ type: 'warning', title: 'Bradycardia Detected', msg: `Heart rate dropped to ${Math.round(minHR)} BPM. Assess for cardiac conduction abnormalities.` });
+  if (averageHeartRate > 100) {
+    result.push({ severity: 'warning', message: 'Tachycardia detected' });
   }
-
-  if (avgTemp > 37.5) {
-    alerts.push({ type: 'warning', title: 'Pyrexia / Fever Indication', msg: `Core body temperature averaging ${avgTemp.toFixed(1)}°C. Evaluate for infection or hyperthermia.` });
-  } else if (avgTemp < 35.5) {
-    alerts.push({ type: 'warning', title: 'Hypothermia Risk', msg: `Core body temperature averaging ${avgTemp.toFixed(1)}°C. Check environmental controls and patient insulation.` });
-  }
-
-  if (avgMotion > 1.0) {
-    alerts.push({ type: 'warning', title: 'Restless Sleep Pattern', msg: `High motion index detected (${avgMotion.toFixed(2)}). Periodic Limb Movement Disorder or severe insomnia possible.` });
-  } else {
-    alerts.push({ type: 'normal', title: 'Motion Levels Stable', msg: `Low motion index (${avgMotion.toFixed(2)}). No signs of restlessness or PLMD.` });
-  }
-
-  // Render Alerts
-  aiAnalysisContent.innerHTML = alerts.map(a => `
-    <div class="ai-alert ${a.type}">
-      <h4><i class="fa-solid fa-${a.type === 'critical' ? 'triangle-exclamation' : a.type === 'warning' ? 'circle-exclamation' : 'circle-check'}"></i> ${a.title}</h4>
-      <p>${a.msg}</p>
-    </div>
-  `).join('');
+  return result;
 }
 
+// ——— Status Updates ———
+socket.on('bio:data', (data) => {
+  const statusLogList = document.getElementById('statusLogList');
+  const logItem = document.createElement('li');
+  logItem.innerText = `Telemetry received at ${new Date().toLocaleTimeString()}`;
+  statusLogList.appendChild(logItem);
+});
 
-// ═══════════════════════════════════════════════════════════════════
-// 6. STATUS UPDATES (Simulated Chronological Log)
-// ═══════════════════════════════════════════════════════════════════
-const alertTemplates = [
-  { type: 'critical', icon: 'fa-phone', text: 'SMS Sent to 555-1234: Apnea threshold breached. SpO2 critical.' },
-  { type: 'normal', icon: 'fa-satellite-dish', text: 'ESP32 Heartbeat Restored. Data streaming resumed at 10Hz.' },
-  { type: 'critical', icon: 'fa-truck-medical', text: 'Code Blue Alert: Rapid Response Team notified for Bed 4.' },
-  { type: 'normal', icon: 'fa-database', text: 'Patient history auto-saved to secure clinical database.' },
-  { type: 'critical', icon: 'fa-bell', text: 'Tachycardia Warning: HR exceeded 120 BPM for >15 seconds.' },
-  { type: 'normal', icon: 'fa-shield-halved', text: 'System Integrity Check: All biometric sensors calibrated.' }
-];
-
-function addStatusLog(item) {
-  if (!statusLogList || !logEmpty) return;
-  logEmpty.style.display = 'none';
-  const time = new Date().toLocaleTimeString();
-  const li = document.createElement('li');
-  li.className = `log-item ${item.type}`;
-  li.innerHTML = `
-    <div class="log-icon"><i class="fa-solid ${item.icon}"></i></div>
-    <div class="log-text"><strong>${item.type === 'critical' ? 'Critical Alert' : 'System Notification'}</strong><p>${item.text}</p></div>
-    <span class="log-time">${time}</span>
-  `;
-  statusLogList.prepend(li);
-}
-
-// Simulate alerts every few seconds if viewing the Status Updates tab
 setInterval(() => {
-  const statusView = document.getElementById('view-status-updates');
-  if (statusView && statusView.classList.contains('active') && Math.random() > 0.6) {
-    addStatusLog(alertTemplates[Math.floor(Math.random() * alertTemplates.length)]);
-  }
-}, 4000);
+  const statusLogList = document.getElementById('statusLogList');
+  const logItem = document.createElement('li');
+  logItem.innerText = `System Integrity Check: OK at ${new Date().toLocaleTimeString()}`;
+  statusLogList.appendChild(logItem);
+}, 15000);
 
+// ——— Patient History ———
+const patientHistory = {
+  name: 'John Doe',
+  age: 54,
+  diagnosis: 'OSA'
+};
 
-// ═══════════════════════════════════════════════════════════════════
-// INIT, CLOCK & SOCKET STATUS
-// ═══════════════════════════════════════════════════════════════════
-function updateClock() {
-  topbarTime.textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-}
-setInterval(updateClock, 1000);
-updateClock();
-
-socket.on('system:status', (status) => {
-  if (!connectionBadge) return;
-  if (status.esp32Connected) { 
-    connectionBadge.className = 'connection-badge live'; 
-    connectionBadge.querySelector('.conn-text').textContent = 'ESP32 Live'; 
-  } else if (status.simulationActive) { 
-    connectionBadge.className = 'connection-badge'; 
-    connectionBadge.querySelector('.conn-text').textContent = 'Simulation'; 
-  }
+const patientHistoryEl = document.getElementById('patientHistory');
+patientHistoryEl.innerHTML = '';
+Object.keys(patientHistory).forEach(key => {
+  const rowEl = document.createElement('tr');
+  const keyEl = document.createElement('th');
+  keyEl.innerText = key.charAt(0).toUpperCase() + key.slice(1);
+  const valueEl = document.createElement('td');
+  valueEl.innerText = patientHistory[key];
+  rowEl.appendChild(keyEl);
+  rowEl.appendChild(valueEl);
+  patientHistoryEl.appendChild(rowEl);
 });
 
-// Hero Particles (Simple generator if on Home view)
-function createParticles() {
-  const container = document.getElementById('heroParticles');
-  if (!container) return;
-  for (let i = 0; i < 30; i++) {
-    const particle = document.createElement('div');
-    particle.className = 'hero-particle';
-    particle.style.left = Math.random() * 100 + '%';
-    particle.style.top = (80 + Math.random() * 30) + '%';
-    particle.style.animationDuration = (6 + Math.random() * 10) + 's';
-    particle.style.animationDelay = Math.random() * 8 + 's';
-    particle.style.width = (2 + Math.random() * 3) + 'px';
-    particle.style.height = particle.style.width;
-    if (Math.random() > 0.7) particle.style.background = 'var(--green)';
-    container.appendChild(particle);
-  }
-}
+// ——— Digital Twin ———
+const digitalTwinEl = document.getElementById('digitalTwin');
+digitalTwinEl.innerHTML = '<i class="fa-solid fa-atom" style="font-size: 100px; color: var(--neon-blue);"></i><h1 class="section-title gradient-text">Digital Twin Architecture</h1><p>Coming in v5.0</p>';
 
-document.addEventListener('DOMContentLoaded', () => {
-  switchView('home');
-  createParticles();
-  drawECG(); // Start ECG render loop
-});
+navigateTo('home');
